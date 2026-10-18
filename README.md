@@ -540,7 +540,7 @@ x-ui log                                     # 3x-ui 內建日誌
 腳本頂部有一組 `BRAND_*` 變數：
 
 ```bash
-BRAND_NAME="NatShift"
+BRAND_NAME="NatShift-N"
 BRAND_TG="@NatShift"
 BRAND_TG_URL="https://t.me/NatShift"
 BRAND_SITE="hkvps.xyz"
