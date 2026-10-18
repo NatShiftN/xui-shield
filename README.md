@@ -1,6 +1,6 @@
 # XUI-SHIELD
 
-> 3x-ui 一鍵抗封鎖面板 + 自動化防火牆防禦 + 每日備份  
+> 3x-ui 一鍵抗封鎖面板脚本 + 自動化防火牆防禦 + 每日備份  
 > 作者 **NatShift-N** · Telegram [@NatShift](https://t.me/NatShift) · VPS 官網 [hkvps.xyz](https://hkvps.xyz)  
 > 香港動態 IP NAT VPS · PVE / KVM 全虛擬化 · 每天自動更換 IP
 
