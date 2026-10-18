@@ -1,0 +1,11 @@
+# 執行時產生的檔案，不應提交
+*.log
+*.tar.gz
+config.env
+xui-shield-client.txt
+
+# 作業系統 / 編輯器
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
