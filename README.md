@@ -1,6 +1,6 @@
 # XUI-SHIELD
 
-> 3x-ui 一鍵抗封鎖面板脚本 + 自動化防火牆防禦 + 每日備份  
+> 3x-ui 一鍵抗封鎖面板 + 自動化防火牆防禦 + 每日備份  
 > 作者 **NatShift-N** · Telegram [@NatShift](https://t.me/NatShift) · VPS 官網 [hkvps.xyz](https://hkvps.xyz)  
 > 香港動態 IP NAT VPS · PVE / KVM 全虛擬化 · 每天自動更換 IP
 
@@ -9,8 +9,10 @@
 針對香港動態 IP NAT VPS 額外支援端口映射與 DDNS 域名。
 
 ```bash
-bash xui-shield.sh
+bash <(curl -fsSL https://raw.githubusercontent.com/NatShiftN/xui-shield/main/xui-shield.sh)
 ```
+
+> 不用先下載。貼上後會直接執行，並把命令安裝到 `/usr/local/bin/xui-shield`。
 
 ---
 
@@ -55,7 +57,23 @@ bash xui-shield.sh
 
 ## 快速開始
 
-### 方法 A：上傳後執行（推薦）
+### 方法 A：一鍵安裝（免下載，推薦）
+
+```bash
+bash <(curl -fsSL https://raw.githubusercontent.com/NatShiftN/xui-shield/main/xui-shield.sh)
+```
+
+貼上後直接執行，不需要先下載檔案。安裝完成後會多一個命令：
+
+```bash
+xui-shield --status
+xui-shield --confirm-firewall
+```
+
+> 如果 GitHub raw 在你的網絡較慢，可用 jsDelivr 鏡像：
+> `bash <(curl -fsSL https://cdn.jsdelivr.net/gh/NatShiftN/xui-shield@main/xui-shield.sh)`
+
+### 方法 B：上傳後執行
 
 ```bash
 # 在你的電腦上
@@ -66,28 +84,21 @@ ssh root@你的伺服器IP
 bash /root/xui-shield.sh
 ```
 
-### 方法 B：託管後一鍵（自行上傳到你的網站）
+### 方法 C：自行託管
 
 ```bash
 bash <(curl -fsSL https://你的域名/xui-shield.sh)
 ```
 
-### 方法 C：發布到 GitHub 後一鍵
-
-```bash
-bash <(curl -fsSL https://raw.githubusercontent.com/<你的帳號>/xui-shield/main/xui-shield.sh)
-```
-
-> 把 `<你的帳號>` 換成 GitHub 使用者名稱即可。建議同時建立 `v1.0.0` 標籤，
-> 之後可以用固定版本連結，避免 `main` 更新影響舊部署。
-
-> 用 `bash <(curl ...)` 執行時，腳本沒有本體檔案，`--backup-only` 之類功能仍可用，
-> 但建議先下載再執行，方便日後重新執行和更新。
+> 用 `bash <(curl ...)` 執行時，腳本會自動把 `xui-shield` 命令安裝到 `/usr/local/bin`；
+> 之後可直接用 `xui-shield --status`、`xui-shield --confirm-firewall`。
 
 ### 建議先做一次檢查（不改系統）
 
+完成上方安裝後：
+
 ```bash
-bash xui-shield.sh --check
+xui-shield --check
 ```
 
 它會檢查：系統版本、套件管理器、SSH 端口、記憶體 / 磁盤、時間同步、GitHub 連線、現有 3x-ui，以及是否為 NAT 網絡。
@@ -133,15 +144,25 @@ bash xui-shield.sh --check
 | 面板 | 12345 | 24568 |
 
 ```bash
-bash xui-shield.sh \
+# 已安裝 xui-shield 命令後
+xui-shield \
   --public-host node.example.com \
   --public-port 24567 \
   --panel-public-port 24568
 ```
 
-- `--public-host`：客戶端與瀏覽器實際連接的域名。請用 DDNS 指向每天的新 IP。
-- `--public-port`：Reality 的對外端口。
-- `--panel-public-port`：面板的對外端口。
+或者直接用一鍵安裝，把 NAT 參數放在前面：
+
+```bash
+XUI_PUBLIC_HOST=node.example.com \
+XUI_PUBLIC_PORT=24567 \
+XUI_PANEL_PUBLIC_PORT=24568 \
+bash <(curl -fsSL https://raw.githubusercontent.com/NatShiftN/xui-shield/main/xui-shield.sh)
+```
+
+- `--public-host` / `XUI_PUBLIC_HOST`：客戶端與瀏覽器實際連接的域名。請用 DDNS 指向每天的新 IP。
+- `--public-port` / `XUI_PUBLIC_PORT`：Reality 的對外端口。
+- `--panel-public-port` / `XUI_PANEL_PUBLIC_PORT`：面板的對外端口。
 - 防火牆只需要放行**內網端口**（443、12345）；對外映射由服務商面板負責。
 - SSH 也可能有對外端口映射；連接時請用 `ssh -p <對外端口> root@<共享 IP>`，`scp` 用 `-P <對外端口>`。
 - 部分 NAT 服務商的出入站 IP 可能不同；腳本偵測到的公網 IP 未必是客戶端應連接的 IP，請以服務商提供的共享 IP / 主機名為準。
@@ -181,14 +202,14 @@ bash xui-shield.sh \
 ## 常用指令
 
 ```bash
-bash xui-shield.sh                     # 一鍵完整部署
-bash xui-shield.sh --status            # 查看面板 / 節點 / 防火牆 / 備份狀態
-bash xui-shield.sh --check             # 只檢查環境，不改系統
-bash xui-shield.sh --firewall-only     # 只重新套用防火牆 + Fail2ban
-bash xui-shield.sh --backup-only       # 立即手動備份一次
-bash xui-shield.sh --confirm-firewall  # 確認保留防火牆（取消 15 分鐘自動回滾）
-bash xui-shield.sh --restore /var/backups/x-ui/xui-shield-backup-20250101-043000.tar.gz
-bash xui-shield.sh --uninstall         # 移除本腳本新增的定時器 / jail / 內核參數（保留面板）
+xui-shield                     # 一鍵完整部署
+xui-shield --status            # 查看面板 / 節點 / 防火牆 / 備份狀態
+xui-shield --check             # 只檢查環境，不改系統
+xui-shield --firewall-only     # 只重新套用防火牆 + Fail2ban
+xui-shield --backup-only       # 立即手動備份一次
+xui-shield --confirm-firewall  # 確認保留防火牆（取消 15 分鐘自動回滾）
+xui-shield --restore /var/backups/x-ui/xui-shield-backup-20250101-043000.tar.gz
+xui-shield --uninstall         # 卸載定時器 / jail / 內核參數 / xui-shield 命令（保留面板）
 ```
 
 ---
@@ -250,23 +271,23 @@ bash xui-shield.sh --uninstall         # 移除本腳本新增的定時器 / jai
 
 ```bash
 # 443 被 nginx 佔用？改用 8443，順便更換 SNI
-bash xui-shield.sh --port 8443 --sni www.apple.com
+xui-shield --port 8443 --sni www.apple.com
 
 # 香港動態 IP NAT VPS：對外 24567 → 內網 443，對外 24568 → 內網 12345
-bash xui-shield.sh \
+xui-shield \
   --public-host node.example.com \
   --public-port 24567 \
   --panel-public-port 24568
 
 # 最高安全：面板只監聽 localhost，之後用隧道
-bash xui-shield.sh --local-panel
+xui-shield --local-panel
 ssh -L 8080:127.0.0.1:12345 root@你的IP
 # 瀏覽器開啟 https://127.0.0.1:8080/路徑/
 
 # 換機：舊機備份 → 新機還原
-bash xui-shield.sh --backup-only
+xui-shield --backup-only
 scp /var/backups/x-ui/xui-shield-backup-*.tar.gz root@新機:/root/
-bash xui-shield.sh --restore /root/xui-shield-backup-xxxx.tar.gz
+xui-shield --restore /root/xui-shield-backup-xxxx.tar.gz
 ```
 
 ---
@@ -337,7 +358,7 @@ x-ui restart
 確認方式（三選一）：
 
 - 執行完成時按 Enter（互動模式）；
-- `bash xui-shield.sh --confirm-firewall`；
+- `xui-shield --confirm-firewall`；
 - `-y` 會自動確認。
 
 > 如果 UFW 本身已經啟用，腳本**不會**在回滾時關閉你原有防火牆（避免影響你其他服務）。
@@ -382,13 +403,13 @@ journalctl -u xui-shield-backup -n 50
 修改時間 / 保留天數：
 
 ```bash
-bash xui-shield.sh --backup-time 03:15 --keep 30
+xui-shield --backup-time 03:15 --keep 30
 ```
 
 ### 還原
 
 ```bash
-bash xui-shield.sh --restore /var/backups/x-ui/xui-shield-backup-20250101-043000.tar.gz
+xui-shield --restore /var/backups/x-ui/xui-shield-backup-20250101-043000.tar.gz
 ```
 
 還原前會自動將現有資料庫備份到 `pre-restore-*.db`，所以不會全部丟失。
@@ -396,7 +417,7 @@ bash xui-shield.sh --restore /var/backups/x-ui/xui-shield-backup-20250101-043000
 ### Telegram 備份（可選）
 
 ```bash
-bash xui-shield.sh --tg-token 123456:ABC... --tg-chat 123456789
+xui-shield --tg-token 123456:ABC... --tg-chat 123456789
 ```
 
 之後每次備份都會用 `sendDocument` 上傳到你的 TG。上傳失敗不會影響本地備份。
@@ -459,7 +480,7 @@ A：`--check` 會先測試 GitHub。若伺服器在受限網絡，請先設定�
 A：預設自簽憑證，屬正常。按「進階 → 繼續」即可；或按上面方法更換真憑證。
 
 **Q：忘記面板密碼？**  
-A：`x-ui` 菜單可重設；或 `bash xui-shield.sh --force-panel-reset`（會更換端口 / 路徑 / 帳號密碼）。
+A：`x-ui` 菜單可重設；或 `xui-shield --force-panel-reset`（會更換端口 / 路徑 / 帳號密碼）。
 
 **Q：SSH 被鎖在外面？**  
 A：等 15 分鐘自動回滾；或使用雲廠商 VNC / 救援模式執行 `ufw disable`。

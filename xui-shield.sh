@@ -2,7 +2,7 @@
 # =============================================================================
 #  XUI-SHIELD · 3x-ui 一鍵抗封鎖 + 自動化防火牆 + 每日備份
 # -----------------------------------------------------------------------------
-#  作者 / 維護   NatShift
+#  作者 / 維護   NatShift-N
 #  Telegram      @NatShift        →  https://t.me/NatShift
 #  VPS 官網      hkvps.xyz        →  https://hkvps.xyz
 #
@@ -12,17 +12,20 @@
 #    · 3x-ui / Xray / Sing-box 面板代部署、節點調優、協議偽裝
 #    · 伺服器疑難排解、數據遷移、7x24 代維運
 #
-#  版權所有 (c) 2025-2026 NatShift。可自由使用及修改，請保留此標頭與推廣資訊。
+#  版權所有 (c) 2025-2026 NatShift-N。可自由使用及修改，請保留此標頭與推廣資訊。
 #  免責聲明：本工具僅供合法用途（自建代理、企業內網加速、跨境辦公等），
 #            請自行確認並遵守你所在地區的法律法規。
 # =============================================================================
 #
-#  用法（30 秒版）
-#    bash xui-shield.sh                 # 一鍵：安裝面板 + Reality 節點 + 防火牆 + 備份
-#    bash xui-shield.sh --status        # 查看目前狀態
-#    bash xui-shield.sh --firewall-only # 只重新套用防火牆
-#    bash xui-shield.sh --backup-only   # 立即手動備份
-#    bash xui-shield.sh --help          # 全部參數
+#  一鍵安裝（免下載）
+#    bash <(curl -fsSL https://raw.githubusercontent.com/NatShiftN/xui-shield/main/xui-shield.sh)
+#
+#  安裝後
+#    xui-shield                          # 一鍵：安裝面板 + Reality 節點 + 防火牆 + 備份
+#    xui-shield --status                 # 查看目前狀態
+#    xui-shield --firewall-only          # 只重新套用防火牆
+#    xui-shield --backup-only            # 立即手動備份
+#    xui-shield --help                   # 全部參數
 #
 #  設計原則
 #    1. 不會鎖死你的 SSH：只新增規則、不 reset，逐個 SSH port 放行，還有 15 分鐘
@@ -37,9 +40,23 @@ SCRIPT_VERSION="1.0.0"
 SCRIPT_NAME="xui-shield"
 
 # ---------------------------------------------------------------------------
+# 一鍵安裝 / 自我安裝
+# 分叉（fork）後請把 SELF_URL 改成你自己的 raw 網址
+# ---------------------------------------------------------------------------
+SELF_PATH="/usr/local/bin/xui-shield"
+SELF_URL="https://raw.githubusercontent.com/NatShiftN/xui-shield/main/xui-shield.sh"
+SELF_URL_FALLBACK="https://cdn.jsdelivr.net/gh/NatShiftN/xui-shield@main/xui-shield.sh"
+INSTALL_CMD="bash <(curl -fsSL ${SELF_URL})"
+SELF_CMD="xui-shield"
+STREAMED=0
+case "${BASH_SOURCE[0]:-$0}" in
+    /dev/fd/* | /proc/self/fd/*) STREAMED=1 ;;
+esac
+
+# ---------------------------------------------------------------------------
 # 品牌資料（想修改推廣內容，只需要修改這一組）
 # ---------------------------------------------------------------------------
-BRAND_NAME="NatShift"
+BRAND_NAME="NatShift-N"
 BRAND_TG="@NatShift"
 BRAND_TG_URL="https://t.me/NatShift"
 BRAND_SITE="hkvps.xyz"
@@ -106,9 +123,9 @@ CONFIG_LOADED=0
 FRESH_INSTALL=0
 PANEL_ADOPTED=0
 PUBLIC_IP=""
-PUBLIC_HOST=""
-REALITY_PUBLIC_PORT=""
-PANEL_PUBLIC_PORT=""
+PUBLIC_HOST="${XUI_PUBLIC_HOST:-}"
+REALITY_PUBLIC_PORT="${XUI_PUBLIC_PORT:-}"
+PANEL_PUBLIC_PORT="${XUI_PANEL_PUBLIC_PORT:-}"
 LOCAL_IP=""
 NAT_SUSPECT=0
 FAIL_STAGE="preflight"
@@ -295,8 +312,12 @@ usage() {
 ${C_BOLD}xui-shield${C_RESET} v${SCRIPT_VERSION} — 3x-ui 一鍵抗封鎖 + 自動防火牆 + 每日備份
 ${C_DIM}${BRAND_SITE}  ·  ${BRAND_TG}${C_RESET}
 
+${C_BOLD}安裝（免下載）${C_RESET}
+  ${INSTALL_CMD}
+  # 安裝後可直接使用 xui-shield
+
 ${C_BOLD}用法${C_RESET}
-  bash $0 [選項]
+  ${SELF_CMD} [選項]
 
 ${C_BOLD}動作${C_RESET}
   （無參數）            完整部署：面板 + VLESS-Reality 節點 + 防火牆 + Fail2ban + BBR + 每日備份
@@ -345,14 +366,14 @@ ${C_BOLD}其他${C_RESET}
   -V, --version         顯示版本
 
 ${C_BOLD}常用例子${C_RESET}
-  bash $0                              # 最常用：一鍵全自動
-  bash $0 --port 8443 --sni www.apple.com
-  bash $0 --public-host node.example.com --public-port 24567 --panel-public-port 24568
+  ${SELF_CMD}                              # 最常用：一鍵全自動
+  ${SELF_CMD} --port 8443 --sni www.apple.com
+  ${SELF_CMD} --public-host node.example.com --public-port 24567 --panel-public-port 24568
                                        # NAT VPS + DDNS：客戶端用域名:24567
-  bash $0 --local-panel                # 面板只聽 localhost，之後：
+  ${SELF_CMD} --local-panel            # 面板只聽 localhost，之後：
                                        # ssh -L 8080:127.0.0.1:<面板端口> root@<IP>
-  bash $0 --backup-only                # 換機前手動備份
-  bash $0 --restore /var/backups/x-ui/xui-shield-backup-20250101-043000.tar.gz
+  ${SELF_CMD} --backup-only            # 換機前手動備份
+  ${SELF_CMD} --restore /var/backups/x-ui/xui-shield-backup-20250101-043000.tar.gz
 
 ${C_DIM}提示：本腳本只會「新增」防火牆規則，不會 reset。修改防火牆後有 15 分鐘自動回滾，
       確認 SSH 正常後執行 --confirm-firewall（或按提示按 Enter）即可保留。${C_RESET}
@@ -462,7 +483,7 @@ parse_args() {
                 ;;
             *)
                 err "未知參數：$1"
-                printf '試下 %s --help\n' "$0" >&2
+                printf '試下 %s --help\n' "${SELF_CMD}" >&2
                 exit 2
                 ;;
         esac
@@ -477,8 +498,42 @@ have() { command -v "$1" >/dev/null 2>&1; }
 
 require_root() {
     if [[ ${EUID} -ne 0 ]]; then
-        err "需要 root 權限。請用：sudo bash $0"
+        err "需要 root 權限。請用 root 執行（例如先執行 sudo -i）。"
         exit 1
+    fi
+}
+
+# 把目前腳本安裝到 /usr/local/bin/xui-shield，之後可直接用 xui-shield 命令
+install_self() {
+    [[ ${EUID} -eq 0 ]] || return 0
+
+    local src="${BASH_SOURCE[0]:-$0}"
+    if ((STREAMED == 0)) && [[ -f ${src} ]]; then
+        src=$(readlink -f "${src}" 2>/dev/null || printf '%s' "${src}")
+        if [[ ${src} != "${SELF_PATH}" ]]; then
+            if install -m 755 "${src}" "${SELF_PATH}" 2>/dev/null; then
+                ok "已安裝命令：${SELF_CMD}"
+            else
+                warn "無法安裝命令到 ${SELF_PATH}，仍可繼續使用本次執行。"
+            fi
+        fi
+        return 0
+    fi
+
+    # 由 curl 直接執行：抓一份到本機，令後續 --status / --confirm-firewall 可用
+    if [[ ! -x ${SELF_PATH} ]] || ((STREAMED == 1)); then
+        info "安裝命令列工具到 ${SELF_PATH} …"
+        local tmp="${SELF_PATH}.tmp.$$" url
+        for url in "${SELF_URL}" "${SELF_URL_FALLBACK}"; do
+            if curl -fsSL --max-time 60 "${url}" -o "${tmp}" &&
+                chmod 755 "${tmp}" &&
+                mv -f "${tmp}" "${SELF_PATH}"; then
+                ok "已安裝命令：${SELF_CMD}"
+                return 0
+            fi
+        done
+        rm -f "${tmp}" 2>/dev/null || true
+        warn "無法安裝 ${SELF_CMD} 命令；可繼續使用本次執行，或重新貼上一鍵指令。"
     fi
 }
 
@@ -732,6 +787,10 @@ load_config() {
         CONFIG_LOADED=1
         dbg "loaded config ${CONF_FILE}"
     fi
+    # 環境變數優先，方便一鍵安裝時直接帶入 NAT 參數
+    PUBLIC_HOST="${XUI_PUBLIC_HOST:-${PUBLIC_HOST}}"
+    REALITY_PUBLIC_PORT="${XUI_PUBLIC_PORT:-${REALITY_PUBLIC_PORT}}"
+    PANEL_PUBLIC_PORT="${XUI_PANEL_PUBLIC_PORT:-${PANEL_PUBLIC_PORT}}"
 }
 
 save_config() {
@@ -1663,10 +1722,10 @@ prompt_firewall_confirm() {
         if ((rc == 0)); then
             confirm_firewall
         else
-            warn "未收到確認。15 分鐘後會自動關閉 UFW；如連線正常，執行：bash $0 --confirm-firewall"
+            warn "未收到確認。15 分鐘後會自動關閉 UFW；如連線正常，執行：${SELF_CMD} --confirm-firewall"
         fi
     else
-        warn "非互動模式：15 分鐘後自動關閉 UFW。連線正常請執行：bash $0 --confirm-firewall"
+        warn "非互動模式：15 分鐘後自動關閉 UFW。連線正常請執行：${SELF_CMD} --confirm-firewall"
     fi
 }
 
@@ -2161,10 +2220,10 @@ print_report() {
             "${C_BOLD}${C_YELLOW}" "${C_RESET}"
     fi
     printf '    · 想更換真憑證：把 fullchain.pem / privkey.pem 放到 /etc/x-ui/cert/ 後執行 x-ui restart\n'
-    printf '    · 想更換 SNI 或端口：重新執行 bash %s --port 8443 --sni www.apple.com\n' "$(basename "$0")"
+    printf '    · 想更換 SNI 或端口：重新執行 %s --port 8443 --sni www.apple.com\n' "${SELF_CMD}"
     if ((FIREWALL_ENABLE == 1)) && [[ ${FW_BACKEND} == "ufw" ]]; then
-        printf '    · %s重要%s：15 分鐘內確認 SSH 正常，然後執行 bash %s --confirm-firewall\n' \
-            "${C_BOLD}${C_YELLOW}" "${C_RESET}" "$(basename "$0")"
+        printf '    · %s重要%s：15 分鐘內確認 SSH 正常，然後執行 %s --confirm-firewall\n' \
+            "${C_BOLD}${C_YELLOW}" "${C_RESET}" "${SELF_CMD}"
     fi
     printf '    · 完整日誌：%s\n' "${LOG_FILE}"
     hr "═" 70
@@ -2305,7 +2364,7 @@ do_restore() {
 # 卸載本腳本新增的內容（保留 3x-ui 和資料）
 # ---------------------------------------------------------------------------
 do_uninstall() {
-    warn "會移除：備份定時器、Fail2ban 自訂 jail、內核參數檔、防火牆回滾工具。"
+    warn "會移除：備份定時器、Fail2ban 自訂 jail、內核參數檔、防火牆回滾工具、xui-shield 命令。"
     warn "不會移除：3x-ui 面板、資料庫、備份檔、UFW 本身。"
     confirm "確定要卸載 xui-shield 的系統設定嗎？" "n" || { say "已取消。"; return 0; }
 
@@ -2322,9 +2381,10 @@ do_uninstall() {
     sysctl --system >>"${LOG_FILE}" 2>&1 || true
     systemctl stop xui-shield-fw-guard.timer >/dev/null 2>&1 || true
     systemctl reset-failed xui-shield-fw-guard.service >/dev/null 2>&1 || true
+    rm -f "${SELF_PATH}" 2>/dev/null || true
 
     ok "已移除 xui-shield 系統設定。面板和備份檔仍然保留。"
-    say "如需重新部署：bash $0"
+    say "如需重新部署：${INSTALL_CMD}"
 }
 
 # ---------------------------------------------------------------------------
@@ -2421,30 +2481,32 @@ main() {
     load_config
     parse_args "$@"
 
+    require_root
+
+    case "${ACTION}" in
+        check | uninstall) ;;
+        *) install_self ;;
+    esac
+
     case "${ACTION}" in
         status)
-            require_root
             show_status
             exit 0
             ;;
         confirm-fw)
-            require_root
             confirm_firewall
             exit 0
             ;;
         restore)
-            require_root
             do_restore "${RESTORE_FILE}"
             exit 0
             ;;
         uninstall)
-            require_root
             do_uninstall
             exit 0
             ;;
     esac
 
-    require_root
     WORKDIR=$(mktemp -d /tmp/xui-shield.XXXXXX)
     # shellcheck disable=SC2064
     trap "rm -rf '${WORKDIR}'" EXIT
@@ -2455,7 +2517,7 @@ main() {
         preflight
         printf '\n'
         ok "環境檢查完成，沒有改動任何系統設定。"
-        say "可以正式執行：bash $0"
+        say "可以正式執行：${INSTALL_CMD}"
         exit 0
     fi
 
